@@ -1,0 +1,811 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Xander Sanders — The Edge Command Center</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Instrument+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+  :root{
+    --bg:#0A111E; --panel:#111A2B; --panel2:#172236; --line:#233149;
+    --ink:#EAF0F9; --muted:#8DA1BD; --dim:#5C7090;
+    --green:#3DDC97; --amber:#F5B942; --red:#F07167; --blue:#5B8DEF;
+    --mono:'IBM Plex Mono',monospace; --sans:'Instrument Sans',sans-serif; --serif:'Instrument Serif',serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.55;-webkit-font-smoothing:antialiased}
+  ::selection{background:rgba(61,220,151,.25)}
+  button{font-family:inherit;cursor:pointer}
+  input,select,textarea{font-family:inherit}
+  .wrap{max-width:960px;margin:0 auto;padding:0 20px}
+  .hidden{display:none!important}
+
+  /* ---------- TOP BAR ---------- */
+  .topbar{position:sticky;top:0;z-index:100;background:rgba(10,17,30,.94);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+  .topbar-inner{max-width:960px;margin:0 auto;padding:12px 20px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+  .brand{font-family:var(--serif);font-size:20px}
+  .brand em{font-style:italic;color:var(--green)}
+  .brand .lock{font-family:var(--mono);font-size:10px;color:var(--green);border:1px solid var(--line);border-radius:999px;padding:3px 9px;margin-left:10px;vertical-align:middle;letter-spacing:.1em}
+  .spacer{flex:1}
+  .viewtoggle{display:flex;border:1px solid var(--line);border-radius:999px;overflow:hidden;background:var(--panel)}
+  .viewtoggle button{background:none;border:none;color:var(--muted);font-family:var(--mono);font-size:11px;letter-spacing:.08em;padding:8px 16px;transition:.2s}
+  .viewtoggle button.on{background:var(--green);color:#06251A;font-weight:600}
+  .loginbtn{background:var(--green);border:none;color:#06251A;border-radius:999px;padding:8px 20px;font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.08em;transition:transform .15s,filter .15s}
+  .loginbtn:hover{filter:brightness(1.08);transform:translateY(-1px)}
+  .logout{background:none;border:1px solid var(--line);color:var(--dim);border-radius:999px;padding:8px 14px;font-family:var(--mono);font-size:11px;transition:.2s}
+  .logout:hover{color:var(--red);border-color:var(--red)}
+
+  /* ---------- LOGIN OVERLAY ---------- */
+  #login{position:fixed;inset:0;z-index:200;display:flex;align-items:center;justify-content:center;background:
+    radial-gradient(ellipse 80% 60% at 70% -10%,rgba(61,220,151,.08),transparent),
+    radial-gradient(ellipse 60% 50% at 10% 110%,rgba(91,141,239,.07),transparent),rgba(5,9,17,.92);backdrop-filter:blur(6px)}
+  .login-card{width:min(420px,92vw);border:1px solid var(--line);border-radius:20px;background:var(--panel);
+    padding:40px 34px;box-shadow:0 40px 90px -40px rgba(0,0,0,.8);animation:cardIn .5s cubic-bezier(.2,.8,.2,1);position:relative}
+  @keyframes cardIn{from{opacity:0;transform:translateY(24px) scale(.97)}to{opacity:1;transform:none}}
+  .login-close{position:absolute;top:14px;right:16px;background:none;border:none;color:var(--dim);font-size:20px;line-height:1;padding:6px}
+  .login-close:hover{color:var(--ink)}
+  .login-logo{font-family:var(--serif);font-size:34px;line-height:1.05}
+  .login-logo em{font-style:italic;color:var(--green)}
+  .login-sub{color:var(--muted);font-size:13.5px;margin:10px 0 26px}
+  .field{margin-bottom:14px}
+  .field label{display:block;font-family:var(--mono);font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--dim);margin-bottom:7px}
+  .field input{width:100%;background:var(--panel2);border:1px solid var(--line);border-radius:10px;color:var(--ink);
+    padding:12px 14px;font-size:14.5px;outline:none;transition:border-color .2s,box-shadow .2s}
+  .field input:focus{border-color:var(--green);box-shadow:0 0 0 3px rgba(61,220,151,.12)}
+  .login-btn{width:100%;margin-top:8px;background:var(--green);color:#06251A;border:none;border-radius:10px;
+    padding:13px;font-weight:700;font-size:14.5px;letter-spacing:.02em;transition:transform .15s,filter .15s}
+  .login-btn:hover{filter:brightness(1.08);transform:translateY(-1px)}
+  .login-err{color:var(--red);font-size:12.5px;font-family:var(--mono);margin-top:12px;min-height:18px;text-align:center}
+  .shake{animation:shake .4s}
+  @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-7px)}75%{transform:translateX(7px)}}
+  .login-foot{margin-top:22px;color:var(--dim);font-size:11px;font-family:var(--mono);text-align:center;line-height:1.7}
+
+  /* ---------- NAV ---------- */
+  .nav{border-bottom:1px solid var(--line);background:rgba(10,17,30,.9)}
+  .nav-inner{max-width:960px;margin:0 auto;display:flex;overflow-x:auto;padding:0 8px;scrollbar-width:none}
+  .nav-inner::-webkit-scrollbar{display:none}
+  .nav-inner button{flex:0 0 auto;background:none;border:none;color:var(--muted);font-family:var(--mono);font-size:11.5px;
+    letter-spacing:.08em;text-transform:uppercase;padding:14px 15px;border-bottom:2px solid transparent;transition:color .15s;min-height:44px}
+  .nav-inner button:hover{color:var(--ink)}
+  .nav-inner button.active{color:var(--green);border-bottom-color:var(--green)}
+
+  /* ---------- TABS ---------- */
+  .tab{animation:tabIn .45s cubic-bezier(.2,.8,.2,1)}
+  @keyframes tabIn{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+  .sec-eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--amber);margin-bottom:10px}
+  h2{font-family:var(--serif);font-weight:400;font-size:clamp(28px,5vw,42px);line-height:1.08;margin-bottom:12px}
+  h2 em{font-style:italic;color:var(--green)}
+  .lede{color:var(--muted);max-width:680px;margin-bottom:28px;font-size:15px}
+  .lede strong{color:var(--ink)}
+  .pad{padding:44px 0 80px}
+
+  /* ---------- CARDS / GRIDS ---------- */
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+  @media(max-width:720px){.grid2,.grid4{grid-template-columns:1fr 1fr}}
+  @media(max-width:480px){.grid2,.grid4{grid-template-columns:1fr}}
+  .card{border:1px solid var(--line);border-radius:14px;background:var(--panel);padding:18px}
+  .stat .num{font-family:var(--serif);font-size:34px;line-height:1}
+  .stat .num.pos{color:var(--green)} .stat .num.neg{color:var(--red)} .stat .num.neu{color:var(--amber)}
+  .stat .lbl{font-family:var(--mono);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);margin-top:8px}
+  .stat p{color:var(--muted);font-size:12.5px;margin-top:8px}
+
+  /* ---------- CHECKLIST ---------- */
+  .catbar{display:flex;align-items:center;gap:12px;margin:26px 0 12px}
+  .catbar .cname{font-family:var(--mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--green)}
+  .catbar .cline{flex:1;height:1px;background:var(--line)}
+  .catbar .ccount{font-family:var(--mono);font-size:11px;color:var(--dim)}
+  .chk{display:flex;align-items:flex-start;gap:13px;border:1px solid var(--line);border-radius:12px;background:var(--panel);
+    padding:14px 16px;margin-bottom:9px;cursor:pointer;transition:border-color .2s,transform .15s,background .2s;position:relative;overflow:hidden}
+  .chk:hover{border-color:var(--green);transform:translateX(3px)}
+  .chk .box{flex:0 0 auto;width:21px;height:21px;border:2px solid var(--dim);border-radius:6px;margin-top:2px;display:flex;
+    align-items:center;justify-content:center;transition:.2s}
+  .chk .box svg{opacity:0;transform:scale(.4);transition:.2s}
+  .chk.done{background:var(--panel2)}
+  .chk.done .box{background:var(--green);border-color:var(--green)}
+  .chk.done .box svg{opacity:1;transform:scale(1)}
+  .chk .txt{flex:1}
+  .chk .txt b{font-weight:600;font-size:14.5px;transition:color .2s}
+  .chk.done .txt b{color:var(--muted);text-decoration:line-through;text-decoration-color:rgba(61,220,151,.5)}
+  .chk .xp{font-family:var(--mono);font-size:10px;color:var(--amber);border:1px solid var(--line);border-radius:6px;padding:3px 7px;white-space:nowrap;margin-top:2px}
+  .chk .flash{position:absolute;inset:0;background:rgba(61,220,151,.18);opacity:0;pointer-events:none}
+  .chk.justdone .flash{animation:flash .6s ease-out}
+  @keyframes flash{from{opacity:1}to{opacity:0}}
+  .progwrap{border:1px solid var(--line);border-radius:14px;background:var(--panel);padding:18px 20px;margin-bottom:8px}
+  .progrow{display:flex;justify-content:space-between;font-family:var(--mono);font-size:11px;color:var(--muted);margin-bottom:8px;letter-spacing:.08em}
+  .progtrack{height:7px;border-radius:99px;background:var(--panel2);overflow:hidden}
+  .progfill{height:100%;border-radius:99px;background:linear-gradient(90deg,var(--green),#7BEFC0);width:0;transition:width .8s cubic-bezier(.2,.8,.2,1)}
+
+  /* ---------- JOURNAL ---------- */
+  .jform{border:1px solid var(--line);border-radius:16px;background:var(--panel);padding:20px;margin-bottom:22px}
+  .jform .frow{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+  @media(max-width:720px){.jform .frow{grid-template-columns:1fr 1fr}}
+  .jform .ffull{grid-column:1/-1}
+  .jform label{display:block;font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);margin-bottom:6px}
+  .jform input,.jform select,.jform textarea{width:100%;background:var(--panel2);border:1px solid var(--line);border-radius:9px;
+    color:var(--ink);padding:10px 12px;font-size:13.5px;outline:none;transition:border-color .2s}
+  .jform input:focus,.jform select:focus,.jform textarea:focus{border-color:var(--green)}
+  .jform textarea{resize:vertical;min-height:64px}
+  .addbtn{margin-top:14px;background:var(--green);color:#06251A;border:none;border-radius:9px;padding:11px 22px;font-weight:700;font-size:13.5px}
+  .addbtn:hover{filter:brightness(1.08)}
+  table.jt{width:100%;border-collapse:collapse;font-size:13px}
+  table.jt th{font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);
+    text-align:left;padding:10px 10px;border-bottom:1px solid var(--line)}
+  table.jt td{padding:11px 10px;border-bottom:1px solid var(--line);color:var(--muted);vertical-align:top}
+  table.jt td b{color:var(--ink);font-weight:600}
+  .pl.pos{color:var(--green);font-weight:600;font-family:var(--mono)}
+  .pl.neg{color:var(--red);font-weight:600;font-family:var(--mono)}
+  .sidechip{font-family:var(--mono);font-size:10px;border-radius:6px;padding:2px 8px;border:1px solid var(--line)}
+  .sidechip.long{color:var(--green)} .sidechip.short{color:var(--red)}
+  .delbtn{background:none;border:none;color:var(--dim);font-size:15px;padding:2px 6px}
+  .delbtn:hover{color:var(--red)}
+  .empty{border:1px dashed var(--line);border-radius:14px;padding:34px;text-align:center;color:var(--dim);font-size:13.5px}
+  .empty b{color:var(--muted)}
+  .thesis{max-width:260px;white-space:normal}
+
+  /* ---------- RESOURCES ---------- */
+  .res{border:1px solid var(--line);border-radius:14px;background:var(--panel);padding:18px;margin-bottom:12px}
+  .res h3{font-size:15.5px;font-weight:700;display:flex;align-items:center;gap:10px}
+  .res h3 .tag{font-family:var(--mono);font-size:9.5px;color:var(--amber);border:1px solid var(--line);border-radius:6px;padding:2px 7px;letter-spacing:.08em}
+  .res ul{list-style:none;margin-top:12px}
+  .res li{padding:8px 0 8px 20px;position:relative;color:var(--muted);font-size:13.5px;border-top:1px solid rgba(35,49,73,.5)}
+  .res li:first-child{border-top:none}
+  .res li::before{content:"▸";position:absolute;left:2px;color:var(--green);font-size:10px;top:12px}
+  .res li b{color:var(--ink);font-weight:600}
+  .res li .why{display:block;color:var(--dim);font-size:12px;margin-top:2px}
+  .res li .src{font-family:var(--mono);font-size:11px;color:var(--blue)}
+
+  /* ---------- RESUME ---------- */
+  .resume{border:1px solid var(--line);border-radius:18px;background:linear-gradient(160deg,#101a2d,#0d1524);padding:38px 40px;position:relative;overflow:hidden}
+  .resume::before{content:"";position:absolute;top:-80px;right:-80px;width:240px;height:240px;border-radius:50%;
+    background:radial-gradient(circle,rgba(61,220,151,.09),transparent 65%)}
+  .rname{font-family:var(--serif);font-size:clamp(30px,5vw,44px);line-height:1.05}
+  .rname em{font-style:italic;color:var(--green)}
+  .rtitle{font-family:var(--mono);font-size:11.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--amber);margin-top:10px}
+  .rmeta{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}
+  .rmeta .chip{font-family:var(--mono);font-size:10.5px;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:5px 11px;background:var(--panel)}
+  .rsec{margin-top:30px}
+  .rsec h4{font-family:var(--mono);font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--green);
+    border-bottom:1px solid var(--line);padding-bottom:8px;margin-bottom:12px}
+  .ritem{display:flex;gap:14px;padding:9px 0;animation:ritemIn .5s cubic-bezier(.2,.8,.2,1)}
+  @keyframes ritemIn{from{opacity:0;transform:translateX(-10px)}to{opacity:1;transform:none}}
+  .ritem .rdot{flex:0 0 auto;width:7px;height:7px;border-radius:50%;background:var(--green);margin-top:8px}
+  .ritem b{font-weight:600;font-size:14px}
+  .ritem span{display:block;color:var(--muted);font-size:12.5px;margin-top:2px}
+  .rskills{display:flex;flex-wrap:wrap;gap:7px}
+  .rskills .sk{font-family:var(--mono);font-size:11px;border:1px solid var(--line);background:var(--panel2);border-radius:7px;padding:5px 10px;color:var(--muted)}
+  .rgrow{font-family:var(--mono);font-size:10.5px;color:var(--green);margin-top:26px;display:flex;align-items:center;gap:8px}
+  .rgrow .dot{width:7px;height:7px;border-radius:50%;background:var(--green);animation:pulse 1.6s infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
+  .rempty{color:var(--dim);font-size:12.5px;font-style:italic;padding:6px 0}
+
+  /* ---------- PUBLIC ---------- */
+  .pub-hero{padding:70px 0 40px;text-align:center;border-bottom:1px solid var(--line);position:relative;overflow:hidden}
+  .pub-hero::after{content:"";position:absolute;top:-140px;left:50%;transform:translateX(-50%);width:500px;height:300px;
+    background:radial-gradient(ellipse,rgba(61,220,151,.10),transparent 65%);pointer-events:none}
+  .pub-eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.24em;text-transform:uppercase;color:var(--green);margin-bottom:18px}
+  .pub-hero h1{font-family:var(--serif);font-weight:400;font-size:clamp(38px,7vw,64px);line-height:1.04}
+  .pub-hero h1 em{font-style:italic;color:var(--green)}
+  .pub-hero p{color:var(--muted);max-width:560px;margin:18px auto 0;font-size:15px}
+  .livebadge{display:inline-flex;align-items:center;gap:8px;font-family:var(--mono);font-size:11px;color:var(--green);
+    border:1px solid var(--line);border-radius:999px;padding:7px 14px;background:var(--panel);margin-top:22px}
+  .livebadge .dot{width:7px;height:7px;border-radius:50%;background:var(--green);animation:pulse 1.6s infinite}
+
+  /* ---------- STRATMINT ---------- */
+  .sm-hero{border:1px solid var(--line);border-radius:18px;background:linear-gradient(140deg,#101a2d,#0e1a1a);padding:30px;margin-bottom:20px}
+  .sm-logo{font-family:var(--serif);font-size:32px}
+  .sm-logo em{font-style:italic;color:var(--green)}
+  .pipeline{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}
+  .pipe{font-family:var(--mono);font-size:11px;border:1px solid var(--line);border-radius:999px;padding:7px 14px;background:var(--panel);color:var(--muted);position:relative}
+  .pipe:not(:last-child)::after{content:"→";position:absolute;right:-16px;color:var(--dim)}
+
+  /* ---------- MODAL ---------- */
+  .modal{position:fixed;inset:0;z-index:300;background:rgba(5,9,17,.8);display:flex;align-items:center;justify-content:center;padding:20px}
+  .modal-card{width:min(560px,94vw);border:1px solid var(--line);border-radius:16px;background:var(--panel);padding:24px}
+  .modal-card h3{font-size:16px;margin-bottom:6px}
+  .modal-card p{color:var(--muted);font-size:13px;margin-bottom:14px}
+  .modal-card textarea{width:100%;min-height:180px;background:var(--panel2);border:1px solid var(--line);border-radius:10px;
+    color:var(--ink);font-family:var(--mono);font-size:11.5px;padding:12px;outline:none;resize:vertical}
+  .modal-actions{display:flex;gap:10px;margin-top:14px;justify-content:flex-end}
+  .mbtn{border-radius:9px;padding:10px 18px;font-size:13px;font-weight:600;border:1px solid var(--line);background:none;color:var(--muted)}
+  .mbtn.primary{background:var(--green);color:#06251A;border-color:var(--green)}
+
+  .note{margin-top:16px;border-left:2px solid var(--amber);padding:10px 14px;background:var(--panel2);border-radius:0 8px 8px 0;color:var(--muted);font-size:12.5px}
+  .note b{color:var(--amber)}
+  .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);z-index:400;background:var(--green);
+    color:#06251A;font-weight:600;font-size:13px;border-radius:999px;padding:11px 22px;transition:transform .35s cubic-bezier(.2,.8,.2,1);box-shadow:0 12px 30px -10px rgba(61,220,151,.5)}
+  .toast.show{transform:translateX(-50%) translateY(0)}
+</style>
+</head>
+<body>
+
+<!-- ============ TOP BAR (always visible) ============ -->
+<div class="topbar">
+  <div class="topbar-inner">
+    <div class="brand">The <em>Edge</em><span class="lock" id="lockBadge">● PUBLIC</span></div>
+    <div class="spacer"></div>
+    <div class="viewtoggle hidden" id="viewToggle">
+      <button id="vtPub" class="on">PUBLIC</button>
+      <button id="vtPriv">PRIVATE</button>
+    </div>
+    <button class="loginbtn" id="loginBtn">LOG IN</button>
+    <button class="logout hidden" id="logoutBtn">LOG OUT</button>
+  </div>
+</div>
+
+<!-- ============ PUBLIC VIEW (default, open to everyone) ============ -->
+<div id="pubView">
+  <div class="pub-hero">
+    <div class="pub-eyebrow">// Live Resume</div>
+    <h1>Xander Sanders —<br>building the <em>edge.</em></h1>
+    <p>A high-school quant-in-training documenting the full path: competitive programming, competition math, systematic trading, and shipping real products.</p>
+    <div class="livebadge"><span class="dot"></span> THIS RESUME GROWS IN REAL TIME AS MILESTONES ARE COMPLETED</div>
+  </div>
+  <div class="wrap pad">
+    <div id="pubResumeMount"></div>
+  </div>
+</div>
+
+<!-- ============ PRIVATE NAV ============ -->
+<div class="nav hidden" id="privNav">
+  <div class="nav-inner">
+    <button data-tab="dash" class="active">Dashboard</button>
+    <button data-tab="chk">Checklist</button>
+    <button data-tab="journal">Trading Journal</button>
+    <button data-tab="res">Resources</button>
+    <button data-tab="resume">Resume Builder</button>
+    <button data-tab="sm">StratMint</button>
+  </div>
+</div>
+
+<!-- ============ PRIVATE BODY ============ -->
+<div class="wrap pad hidden" id="privBody">
+
+  <!-- ===== DASHBOARD ===== -->
+  <div class="tab" id="tab-dash">
+    <div class="sec-eyebrow">// Command Center</div>
+    <h2>Good to see you, <em>Xander.</em></h2>
+    <p class="lede">Everything you're building, in one screen. Tick things in the <strong>Checklist</strong>, log trades in the <strong>Journal</strong> — the resume rebuilds itself the moment you do.</p>
+
+    <div class="grid4" id="dashStats"></div>
+
+    <div class="catbar"><span class="cname">Progress by track</span><span class="cline"></span></div>
+    <div id="dashProg"></div>
+
+    <div class="catbar"><span class="cname">Next actions</span><span class="cline"></span></div>
+    <div class="grid2" id="dashNext"></div>
+
+    <div class="catbar"><span class="cname">Data control</span><span class="cline"></span></div>
+    <div class="card">
+      <p style="color:var(--muted);font-size:13.5px">This page is session-only: your checklist ticks and journal trades live in the page until you leave. <b style="color:var(--ink)">Export before closing</b> to save your state, and paste it back in next time.</p>
+      <div style="display:flex;gap:10px;margin-top:14px;flex-wrap:wrap">
+        <button class="addbtn" id="exportBtn" style="margin-top:0">Export data</button>
+        <button class="mbtn" id="importBtn" style="padding:11px 22px">Import data</button>
+      </div>
+    </div>
+    <div class="note"><b>Automation:</b> your Weekly Quant Plan Check-In runs every Sunday at 4:00 PM — current build week, upcoming deadlines, one concrete action.</div>
+  </div>
+
+  <!-- ===== CHECKLIST ===== -->
+  <div class="tab hidden" id="tab-chk">
+    <div class="sec-eyebrow">// The Full Checklist</div>
+    <h2>Every rep between here and <em>Jane Street.</em></h2>
+    <p class="lede">Tick an item and two things happen instantly: it counts toward the track progress below, and it <strong>appears on your live resume</strong>. Nothing here is filler — each item is a real, verifiable artifact.</p>
+    <div class="progwrap">
+      <div class="progrow"><span>TOTAL COMPLETION</span><span id="chkPct">0%</span></div>
+      <div class="progtrack"><div class="progfill" id="chkFill"></div></div>
+    </div>
+    <div id="chkList"></div>
+  </div>
+
+  <!-- ===== JOURNAL ===== -->
+  <div class="tab hidden" id="tab-journal">
+    <div class="sec-eyebrow">// Trading Journal</div>
+    <h2>Every trade. Every <em>why.</em></h2>
+    <p class="lede">Log the trade, the thesis, and the emotion. The journal computes your P&amp;L, win rate, and expectancy automatically — and your <strong>track record feeds straight into the resume</strong>. Paper trades count. Honesty is the edge.</p>
+
+    <div class="grid4" id="jStats"></div>
+
+    <div class="jform">
+      <div class="sec-eyebrow" style="margin-bottom:14px">// Log a trade</div>
+      <div class="frow">
+        <div><label>Date</label><input type="date" id="tDate"></div>
+        <div><label>Ticker</label><input type="text" id="tTicker" placeholder="SPY" style="text-transform:uppercase"></div>
+        <div><label>Side</label><select id="tSide"><option value="long">Long</option><option value="short">Short</option></select></div>
+        <div><label>Size (shares/contracts)</label><input type="number" id="tSize" placeholder="10" min="0" step="any"></div>
+        <div><label>Entry price ($)</label><input type="number" id="tEntry" placeholder="450.25" min="0" step="any"></div>
+        <div><label>Exit price ($)</label><input type="number" id="tExit" placeholder="452.10" min="0" step="any"></div>
+        <div><label>Strategy tag</label><select id="tStrat"><option>Gut call</option><option>Mean reversion</option><option>Trend follow</option><option>Earnings play</option><option>Options — defined risk</option><option>Options — naked</option><option>Other</option></select></div>
+        <div><label>Emotion at entry</label><select id="tEmotion"><option>Calm</option><option>FOMO</option><option>Revenge</option><option>Bored</option><option>Confident</option><option>Unsure</option></select></div>
+        <div class="ffull"><label>Why did I take this trade? (thesis)</label><textarea id="tThesis" placeholder="SPY dropped 1.2% below its 20-day average on no news — betting on a bounce back toward the mean…"></textarea></div>
+        <div class="ffull"><label>Lesson / what I'd do differently</label><textarea id="tLesson" placeholder="Entry was fine, but I checked the price 14 times in 10 minutes. Process problem, not thesis problem."></textarea></div>
+      </div>
+      <button class="addbtn" id="addTrade">+ Log trade</button>
+    </div>
+
+    <div id="jTable"></div>
+  </div>
+
+  <!-- ===== RESOURCES ===== -->
+  <div class="tab hidden" id="tab-res">
+    <div class="sec-eyebrow">// The Arsenal</div>
+    <h2>Everything you need to <em>excel</em>, not just qualify.</h2>
+    <p class="lede">Curated for one goal: being the strongest quant candidate in the room. Books build depth, sites build reps, competitions build proof. Work them in parallel — depth in math, fluency in code, instinct in markets.</p>
+    <div id="resList"></div>
+  </div>
+
+  <!-- ===== RESUME BUILDER ===== -->
+  <div class="tab hidden" id="tab-resume">
+    <div class="sec-eyebrow">// Resume Builder</div>
+    <h2>The resume that <em>builds itself.</em></h2>
+    <p class="lede">This is exactly what the public sees. Every checklist item you tick and every trade you log flows in here automatically — skills, projects, competitions, and a live trading track record. Keep ticking.</p>
+    <div id="resumeMount"></div>
+  </div>
+
+  <!-- ===== STRATMINT ===== -->
+  <div class="tab hidden" id="tab-sm">
+    <div class="sec-eyebrow">// Venture</div>
+    <h2>StratMint — the <em>fortune</em> track.</h2>
+    <p class="lede">The app store for trading strategies: every listing carries a verified track record, so retail traders stop gambling on AI hallucinations. Web-app first, free marketplace to solve cold-start, paid layer once a fintech lawyer signs off.</p>
+
+    <div class="sm-hero">
+      <div class="sm-logo">Strat<em>Mint</em></div>
+      <div style="font-family:var(--mono);font-size:11px;color:var(--dim);margin-top:4px">stratmint.app</div>
+      <div class="pipeline">
+        <span class="pipe">DESCRIBE</span><span class="pipe">VALIDATE</span><span class="pipe">BACKTEST</span><span class="pipe">AUTOMATE / SELL</span>
+      </div>
+      <p style="color:var(--muted);font-size:13.5px;margin-top:16px">MVP: free strategy marketplace with verified backtests → seed with strategies (months 2–3) → paid layer + 70/30 seller split (month 4+). Target: $100k+/mo. Fintech SaaS trades at 5–10× ARR.</p>
+    </div>
+
+    <div class="grid2">
+      <div class="res"><h3><span class="tag">PHASE 1</span> Foundation</h3>
+        <ul>
+          <li><b>Ship the free marketplace</b> — Next.js + Tailwind + Supabase, strategy JSON schema, Verified Card component.<span class="why">Cold-start problem: liquidity before monetization. Always.</span></li>
+          <li><b>Daily screener + TradingView backtesting</b><span class="why">Daily engagement loop — the reason people open the app every morning.</span></li>
+          <li><b>Backtest honesty core</b><span class="why">The moat. No cherry-picked equity curves. Ever.</span></li>
+        </ul>
+      </div>
+      <div class="res"><h3><span class="tag">PHASE 2–3</span> Scale</h3>
+        <ul>
+          <li><b>Paid marketplace + credits economy</b><span class="why">Monetize only after liquidity. Consult a fintech lawyer first.</span></li>
+          <li><b>Broker auto-trade connections</b><span class="why">Deferred to Phase 3 deliberately — regulatory risk lives here.</span></li>
+          <li><b>KYC tiers for sellers</b><span class="why">Verified track records need verified humans behind them.</span></li>
+        </ul>
+      </div>
+    </div>
+    <div class="note"><b>Sequence discipline:</b> ResumeRewrite MVP ships first (weeks 1–3) — it funds runway and builds the exact skills StratMint needs. StratMint free layer starts week 4–6. Cash engine first, fortune second.</div>
+  </div>
+
+</div>
+
+<!-- ============ LOGIN OVERLAY ============ -->
+<div id="login" class="hidden">
+  <div class="login-card" id="loginCard">
+    <button class="login-close" id="loginClose" aria-label="Close">✕</button>
+    <div class="login-logo">The <em>Edge</em></div>
+    <div class="login-sub">Private command center. Access is restricted to the owner.</div>
+    <div class="field">
+      <label>Email</label>
+      <input type="email" id="liEmail" placeholder="you@example.com" autocomplete="off">
+    </div>
+    <div class="field">
+      <label>Password</label>
+      <input type="password" id="liPass" placeholder="••••••••••••" autocomplete="off">
+    </div>
+    <button class="login-btn" id="liBtn">Unlock Command Center</button>
+    <div class="login-err" id="liErr"></div>
+    <div class="login-foot">session-only access · data lives in this page until you export it<br>public visitors see the live resume only</div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ================= CONSTANTS ================= */
+const EMAIL_OK = 'xander.sanders29@gmail.com';
+const PASS_OK  = 'KumaKylo143!143';
+
+const CATS = [
+  {id:'coding', name:'Coding & CS'},
+  {id:'math', name:'Math & Competitions'},
+  {id:'trade', name:'Trading & Markets'},
+  {id:'proj', name:'Projects & Shipping'},
+  {id:'app', name:'Applications & Tests'}
+];
+
+const ITEMS = [
+  {id:'c1', cat:'coding', label:'Python + VS Code + Git installed, first script run', xp:'DAY 1', sk:['Python','Git']},
+  {id:'c2', cat:'coding', label:'CS50P completed (Harvard, free)', xp:'FOUNDATION', sk:['Python']},
+  {id:'c3', cat:'coding', label:'100 LeetCode easies solved', xp:'REPS', sk:['Data Structures','Algorithms']},
+  {id:'c4', cat:'coding', label:'50 LeetCode mediums solved', xp:'REPS', sk:['Algorithms']},
+  {id:'c5', cat:'coding', label:'USACO Bronze → Silver promoted', xp:'COMP', sk:['Competitive Programming']},
+  {id:'c6', cat:'coding', label:'USACO Silver → Gold promoted', xp:'COMP', sk:['Competitive Programming']},
+  {id:'c7', cat:'coding', label:'Codeforces rating 1400+', xp:'RATING', sk:['Competitive Programming']},
+  {id:'c8', cat:'coding', label:'Personal trading journal built in Python', xp:'BUILD', sk:['Python','pandas']},
+  {id:'c9', cat:'coding', label:'pandas + numpy fluency (manipulate real market data)', xp:'TOOLING', sk:['pandas','numpy']},
+  {id:'c10', cat:'coding', label:'SQL learned — queries, joins, schema design', xp:'TOOLING', sk:['SQL']},
+  {id:'c11', cat:'coding', label:'StratMint MVP shipped (Next.js + Supabase)', xp:'SHIP', sk:['Next.js','Supabase','Product']},
+  {id:'c12', cat:'coding', label:'First open-source contribution merged', xp:'PUBLIC', sk:['Git','Collaboration']},
+  {id:'m1', cat:'math', label:'Algebra II + Precalculus mastered', xp:'BASE', sk:['Algebra']},
+  {id:'m2', cat:'math', label:'AMC 10 taken (school or host site)', xp:'COMP', sk:['Competition Math']},
+  {id:'m3', cat:'math', label:'AMC 10 score 120+ (honor roll)', xp:'COMP', sk:['Competition Math']},
+  {id:'m4', cat:'math', label:'AIME qualification earned', xp:'COMP', sk:['Competition Math']},
+  {id:'m5', cat:'math', label:'AIME score 7+', xp:'STRETCH', sk:['Competition Math']},
+  {id:'m6', cat:'math', label:'Probability theory course completed (MIT OCW 6.041)', xp:'DEPTH', sk:['Probability']},
+  {id:'m7', cat:'math', label:'Linear algebra (3Blue1Brown + MIT 18.06)', xp:'DEPTH', sk:['Linear Algebra']},
+  {id:'m8', cat:'math', label:'Calculus BC (or MIT 18.01/18.02) completed', xp:'DEPTH', sk:['Calculus']},
+  {id:'m9', cat:'math', label:'Statistics + hypothesis testing solid', xp:'DEPTH', sk:['Statistics']},
+  {id:'m10', cat:'math', label:'"Fifty Challenging Problems in Probability" — all 50 solved', xp:'BOOK', sk:['Probability']},
+  {id:'f1', cat:'trade', label:'Hull — "Options, Futures, and Other Derivatives" read', xp:'BOOK', sk:['Derivatives']},
+  {id:'f2', cat:'trade', label:'CBOE Education options track completed', xp:'COURSE', sk:['Options']},
+  {id:'f3', cat:'trade', label:'The Greeks internalized (Δ Γ Θ ν)', xp:'DEPTH', sk:['Options','Greeks']},
+  {id:'f4', cat:'trade', label:'100 paper trades logged with written theses', xp:'REPS', sk:['Trading']},
+  {id:'f5', cat:'trade', label:'SPY mean-reversion strategy backtested (expecting it to die)', xp:'BUILD', sk:['Backtesting']},
+  {id:'f6', cat:'trade', label:'One strategy with positive backtested expectancy', xp:'EDGE', sk:['Quant Trading']},
+  {id:'f7', cat:'trade', label:'Ernie Chan — "Algorithmic Trading" read', xp:'BOOK', sk:['Quant Trading']},
+  {id:'f8', cat:'trade', label:'López de Prado — "Advances in Financial Machine Learning" read', xp:'BOOK', sk:['Financial ML']},
+  {id:'f9', cat:'trade', label:'"The Man Who Solved the Market" (Simons) read', xp:'BOOK', sk:['Market History']},
+  {id:'f10', cat:'trade', label:'A Jane Street monthly puzzle solved & submitted', xp:'PROOF', sk:['Puzzles']},
+  {id:'p1', cat:'proj', label:'ResumeRewrite MVP shipped (cash engine)', xp:'SHIP', sk:['Product','Shipping']},
+  {id:'p2', cat:'proj', label:'StratMint free marketplace live with real users', xp:'SHIP', sk:['Product','Growth']},
+  {id:'p3', cat:'proj', label:'StratMint reaches 100 users', xp:'TRACTION', sk:['Growth']},
+  {id:'p4', cat:'proj', label:'Personal site / portfolio live', xp:'PUBLIC', sk:['Web']},
+  {id:'p5', cat:'proj', label:'A Kaggle competition entered (any medal = bonus)', xp:'COMP', sk:['ML','Data']},
+  {id:'a1', cat:'app', label:'SAT 1550+ achieved', xp:'GATE', sk:[]},
+  {id:'a2', cat:'app', label:'MIT ED essay drafts complete (authentic, specific)', xp:'APPLY', sk:[]},
+  {id:'a3', cat:'app', label:'Teacher + counselor recommenders cultivated (junior year)', xp:'APPLY', sk:[]},
+  {id:'a4', cat:'app', label:'Jane Street / IMC / Optiver early-insight program applied to', xp:'APPLY', sk:[]},
+  {id:'a5', cat:'app', label:'IMC Prosperity or Jane Street Estimathon competed', xp:'COMP', sk:['Trading','Teamwork']}
+];
+
+const RESOURCES = [
+  {tag:'BOOKS — QUANT CORE', items:[
+    ['Hull — Options, Futures, and Other Derivatives','The bible of derivatives. Every options interview question traces back here.','Search: "Hull Options Futures Other Derivatives"'],
+    ['Ernie Chan — Algorithmic Trading: Winning Strategies and Their Rationale','Mean reversion, momentum, backtesting done honestly. Your first systematic strategies live here.','Wiley / Amazon'],
+    ['López de Prado — Advances in Financial Machine Learning','Why most ML in finance fails, and how the pros avoid it. Read after Chan.','Wiley / Amazon'],
+    ['Emanuel Derman — My Life as a Quant','What the career actually looks like from the inside.','Amazon'],
+    ['Irene Aldridge — High-Frequency Trading','A gentle on-ramp to market microstructure.','Amazon']
+  ]},
+  {tag:'BOOKS — INTERVIEW & PROBABILITY', items:[
+    ['Zhou & Zhou — A Practical Guide to Quantitative Finance Interviews','THE quant interview prep book. Green book. Non-negotiable.','Amazon'],
+    ['Xinfeng Zhou — Heard on the Street (Crack)','Classic brain-teaser and finance question bank.','Amazon'],
+    ['Mosteller — Fifty Challenging Problems in Probability','Tiny book, giant payoff. Jane Street interviews are basically this book with a dress code.','Dover, ~$8'],
+    ['Zuckerman — The Man Who Solved the Market','The Renaissance story. Motivation + humility about what real edge looks like.','Amazon'],
+    ['Tetlock — Superforecasting','Probability calibration in the real world. Directly trains betting fluency.','Amazon']
+  ]},
+  {tag:'COURSES & VIDEO', items:[
+    ['CS50P — Harvard, free','Python from absolute zero. Your Phase 1–2 spine.','cs50.harvard.edu/python'],
+    ['MIT OCW 6.041 / 6.262 — Probability','College-level probability, free, with problem sets.','ocw.mit.edu'],
+    ['MIT OCW 18.S096 — Topics in Mathematics with Applications in Finance','Literally a course about your exact goal. Lectures by practitioners.','ocw.mit.edu'],
+    ['3Blue1Brown — Linear Algebra & Calculus series','Intuition first, symbols second. Watch before the MIT courses.','youtube.com/@3blue1brown'],
+    ['Khan Academy — Statistics & Probability','Fill every gap the fast way.','khanacademy.org'],
+    ['CBOE Education — Options Institute','Free, official options education from the exchange itself.','cboe.com/education'],
+    ['Andrew Ng — Machine Learning Specialization (Coursera)','The standard ML foundation. Audit free.','coursera.org'],
+    ['Jane Street — YouTube channel ("A Day in the Life", puzzle videos)','Calibrate your target. Watch how they think.','youtube.com/@JaneStreet']
+  ]},
+  {tag:'SITES & DAILY PRACTICE', items:[
+    ['LeetCode','The coding interview gym. 100 easies → 50 mediums is the floor.','leetcode.com'],
+    ['Codeforces','Competitive programming rating is a portable, verifiable signal.','codeforces.com'],
+    ['USACO Guide + usaco.org','Free curriculum from Bronze to Platinum.','usaco.guide'],
+    ['AoPS (Art of Problem Solving)','AMC/AIME past exams and community. The math ladder lives here.','artofproblemsolving.com'],
+    ['Project Euler','Math + code fused. Do 50+ problems.','projecteuler.net'],
+    ['QuantStart','Free articles on building real backtesting engines in Python.','quantstart.com'],
+    ['Jane Street — monthly puzzle archive','Solve, submit, get on the wall. Direct signal to the firm.','janestreet.com/puzzles'],
+    ['Two Sigma & HRT puzzle pages','Same game, different firms. Rotate through them.','twosigma.com / hrt.com'],
+    ['Kaggle','Real datasets, real leaderboards, honest feedback.','kaggle.com'],
+    ['Investopedia','When a term confuses you, this is the 2-minute fix.','investopedia.com']
+  ]},
+  {tag:'COMPETITIONS — PROOF OF WORK', items:[
+    ['AMC 10 → AIME','The math ladder. Qualification alone is a resume line; scores compound.','maa.org/amc'],
+    ['USACO (Nov/Dec/Jan/Feb/Open)','Free, four contests a year, promotion is objective proof.','usaco.org'],
+    ['IMC Prosperity Trading Challenge','Global algo-trading competition run by a real market maker. Built for you.','imc-prosperity.notion.site'],
+    ['Jane Street Estimathon','Estimation under time pressure — exactly their interview style.','estimathon.com'],
+    ['Citadel Datathon / Correlation One competitions','Prestige + data skills in one shot.','correlation-one.com'],
+    ['Kaggle competitions','Medals are public, verifiable, and forever.','kaggle.com']
+  ]},
+  {tag:'JANE STREET — SPECIFIC CALIBRATION', items:[
+    ['Their interviews test: probability, mental math speed, betting fluency, honesty about uncertainty','Practice Fermi estimates daily. Practice saying "I don\'t know, but here\'s my distribution."','janestreet.com/join-us'],
+    ['They love: poker, bridge, chess, puzzles, market-making games','Play market-making games with friends. Keep a poker bankroll spreadsheet — it IS a trading journal.','—'],
+    ['Programs: Insight (younger students), SOP (sophomores), ETC','Apply early, apply often. Rejections are free data.','janestreet.com/programs']
+  ]}
+];
+
+/* ================= STATE ================= */
+let state = { checks:{}, trades:[] };
+ITEMS.forEach(i=>state.checks[i.id]=false);
+let loggedIn = false;
+
+function money(v){
+  const s = v<0?'-':'+';
+  return s+'$'+Math.abs(v).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+}
+function toast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove('show'),2200);
+}
+function esc(s){return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+/* ================= VIEWS ================= */
+const loginEl=document.getElementById('login'),
+      pubView=document.getElementById('pubView'),
+      privNav=document.getElementById('privNav'),
+      privBody=document.getElementById('privBody'),
+      viewToggle=document.getElementById('viewToggle'),
+      loginBtn=document.getElementById('loginBtn'),
+      logoutBtn=document.getElementById('logoutBtn'),
+      lockBadge=document.getElementById('lockBadge'),
+      vtPriv=document.getElementById('vtPriv'),
+      vtPub=document.getElementById('vtPub');
+
+function showPublic(){
+  pubView.classList.remove('hidden');
+  privNav.classList.add('hidden');
+  privBody.classList.add('hidden');
+  lockBadge.textContent='● PUBLIC';
+  vtPub.classList.add('on'); vtPriv.classList.remove('on');
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+function showPrivate(){
+  pubView.classList.add('hidden');
+  privNav.classList.remove('hidden');
+  privBody.classList.remove('hidden');
+  lockBadge.textContent='● PRIVATE';
+  vtPriv.classList.add('on'); vtPub.classList.remove('on');
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+/* ================= LOGIN ================= */
+loginBtn.addEventListener('click',()=>{
+  loginEl.classList.remove('hidden');
+  setTimeout(()=>document.getElementById('liEmail').focus(),80);
+});
+document.getElementById('loginClose').addEventListener('click',()=>loginEl.classList.add('hidden'));
+loginEl.addEventListener('click',e=>{if(e.target===loginEl)loginEl.classList.add('hidden');});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')loginEl.classList.add('hidden');});
+
+document.getElementById('liBtn').addEventListener('click', tryLogin);
+document.getElementById('liPass').addEventListener('keydown',e=>{if(e.key==='Enter')tryLogin();});
+document.getElementById('liEmail').addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('liPass').focus();});
+
+function tryLogin(){
+  const em=document.getElementById('liEmail').value.trim().toLowerCase();
+  const pw=document.getElementById('liPass').value;
+  const err=document.getElementById('liErr');
+  if(em===EMAIL_OK && pw===PASS_OK){
+    loggedIn=true;
+    loginEl.classList.add('hidden');
+    loginBtn.classList.add('hidden');
+    logoutBtn.classList.remove('hidden');
+    viewToggle.classList.remove('hidden');
+    document.getElementById('liErr').textContent='';
+    document.getElementById('liPass').value='';
+    showPrivate();
+    renderAll();
+    toast('Welcome back, Xander');
+  }else{
+    err.textContent = em!==EMAIL_OK ? 'UNKNOWN EMAIL — ACCESS DENIED' : 'INCORRECT PASSWORD — ACCESS DENIED';
+    const c=document.getElementById('loginCard');
+    c.classList.remove('shake'); void c.offsetWidth; c.classList.add('shake');
+  }
+}
+logoutBtn.addEventListener('click',()=>{
+  loggedIn=false;
+  loginBtn.classList.remove('hidden');
+  logoutBtn.classList.add('hidden');
+  viewToggle.classList.add('hidden');
+  showPublic();
+  toast('Logged out — public view');
+});
+
+/* ================= VIEW TOGGLE ================= */
+vtPriv.addEventListener('click',()=>{ if(loggedIn) showPrivate(); });
+vtPub.addEventListener('click',()=>showPublic());
+
+/* ================= TABS ================= */
+document.querySelectorAll('#privNav button').forEach(b=>{
+  b.addEventListener('click',()=>{
+    document.querySelectorAll('#privNav button').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');
+    document.querySelectorAll('.tab').forEach(t=>t.classList.add('hidden'));
+    const el=document.getElementById('tab-'+b.dataset.tab);
+    el.classList.remove('hidden'); el.style.animation='none'; void el.offsetWidth; el.style.animation='';
+    window.scrollTo({top:0,behavior:'smooth'});
+  });
+});
+
+/* ================= CHECKLIST ================= */
+function renderChecklist(){
+  const host=document.getElementById('chkList'); host.innerHTML='';
+  CATS.forEach(cat=>{
+    const items=ITEMS.filter(i=>i.cat===cat.id);
+    const done=items.filter(i=>state.checks[i.id]).length;
+    const bar=document.createElement('div'); bar.className='catbar';
+    bar.innerHTML='<span class="cname">'+cat.name+'</span><span class="cline"></span><span class="ccount">'+done+' / '+items.length+'</span>';
+    host.appendChild(bar);
+    items.forEach(it=>{
+      const d=document.createElement('div');
+      d.className='chk'+(state.checks[it.id]?' done':'');
+      d.innerHTML='<div class="box"><svg width="12" height="12" viewBox="0 0 12 12"><path d="M2 6.5L4.8 9.2L10 3.5" stroke="#06251A" stroke-width="2.2" fill="none" stroke-linecap="round"/></svg></div>'+
+        '<div class="txt"><b>'+it.label+'</b></div><span class="xp">'+it.xp+'</span><div class="flash"></div>';
+      d.addEventListener('click',()=>toggleCheck(it.id,d));
+      host.appendChild(d);
+    });
+  });
+  const total=ITEMS.length, done=ITEMS.filter(i=>state.checks[i.id]).length;
+  const pct=Math.round(done/total*100);
+  document.getElementById('chkPct').textContent=pct+'% · '+done+'/'+total;
+  document.getElementById('chkFill').style.width=pct+'%';
+}
+function toggleCheck(id,el){
+  state.checks[id]=!state.checks[id];
+  if(state.checks[id]){ el.classList.add('justdone'); toast('✓ Resume updated'); }
+  renderAll();
+}
+
+/* ================= JOURNAL ================= */
+function tradePL(t){
+  const dir = t.side==='long'?1:-1;
+  return (t.exit - t.entry) * t.size * dir;
+}
+function jStats(){
+  const pls=state.trades.map(tradePL);
+  const n=pls.length;
+  const net=pls.reduce((a,b)=>a+b,0);
+  const wins=pls.filter(p=>p>0), losses=pls.filter(p=>p<=0);
+  const wr=n?wins.length/n:0;
+  const aw=wins.length?wins.reduce((a,b)=>a+b,0)/wins.length:0;
+  const al=losses.length?Math.abs(losses.reduce((a,b)=>a+b,0)/losses.length):0;
+  const exp=(wr*aw)-((1-wr)*al);
+  const pf=al>0?(wr*aw)/((1-wr)*al):Infinity;
+  return {n,net,wr,aw,al,exp,pf};
+}
+function statCard(num,cls,lbl,sub){
+  return '<div class="card stat"><div class="num '+cls+'">'+num+'</div><div class="lbl">'+lbl+'</div><p>'+sub+'</p></div>';
+}
+function renderJournal(){
+  const s=jStats();
+  document.getElementById('jStats').innerHTML=
+    statCard('$'+Math.abs(s.net).toFixed(2), s.net>=0?'pos':'neg', 'NET P&L', s.n+' trade'+(s.n===1?'':'s')+' logged')+
+    statCard((s.n?Math.round(s.wr*100)+'%':'—'), 'neu', 'WIN RATE', 'target: know your number')+
+    statCard((s.n?money(s.exp).replace('+',''):'—'), s.exp>=0?'pos':'neg', 'EXPECTANCY / TRADE', 'the only number that matters')+
+    statCard((s.n&&isFinite(s.pf)?s.pf.toFixed(2)+'×':'—'), 'neu', 'PROFIT FACTOR', 'gross win ÷ gross loss');
+  const host=document.getElementById('jTable');
+  if(!state.trades.length){
+    host.innerHTML='<div class="empty"><b>No trades yet.</b><br>Log your first 10 gut trades exactly as they happened — thesis, emotion, everything.<br>The honesty is the point.</div>';
+    return;
+  }
+  let rows='';
+  [...state.trades].reverse().forEach((t)=>{
+    const pl=tradePL(t);
+    rows+='<tr><td><b>'+t.ticker+'</b></td><td><span class="sidechip '+t.side+'">'+t.side.toUpperCase()+'</span></td>'+
+      '<td>'+t.size+' @ $'+t.entry.toFixed(2)+' → $'+t.exit.toFixed(2)+'</td>'+
+      '<td class="pl '+(pl>=0?'pos':'neg')+'">'+money(pl)+'</td>'+
+      '<td>'+t.strat+'</td><td>'+t.emotion+'</td>'+
+      '<td class="thesis">'+esc(t.thesis)+'</td>'+
+      '<td class="thesis" style="color:var(--dim)">'+esc(t.lesson)+'</td>'+
+      '<td><button class="delbtn" data-del="'+t.id+'">×</button></td></tr>';
+  });
+  host.innerHTML='<div class="card" style="padding:0;overflow-x:auto"><table class="jt"><thead><tr><th>Ticker</th><th>Side</th><th>Fill</th><th>P&L</th><th>Strategy</th><th>Emotion</th><th>Thesis</th><th>Lesson</th><th></th></tr></thead><tbody>'+rows+'</tbody></table></div>';
+  host.querySelectorAll('[data-del]').forEach(b=>b.addEventListener('click',()=>{
+    state.trades=state.trades.filter(t=>t.id!==b.dataset.del); renderAll(); toast('Trade removed');
+  }));
+}
+document.getElementById('addTrade').addEventListener('click',()=>{
+  const g=id=>document.getElementById(id).value;
+  const t={id:Date.now()+'', date:g('tDate'), ticker:(g('tTicker')||'').toUpperCase(),
+    side:g('tSide'), size:parseFloat(g('tSize')), entry:parseFloat(g('tEntry')), exit:parseFloat(g('tExit')),
+    strat:g('tStrat'), emotion:g('tEmotion'), thesis:g('tThesis'), lesson:g('tLesson')};
+  if(!t.ticker||isNaN(t.size)||isNaN(t.entry)||isNaN(t.exit)){toast('Ticker, size, entry & exit required');return;}
+  state.trades.push(t);
+  ['tTicker','tSize','tEntry','tExit','tThesis','tLesson'].forEach(id=>document.getElementById(id).value='');
+  renderAll(); toast('Trade logged — resume updated');
+});
+
+/* ================= RESUME ================= */
+function resumeHTML(){
+  const s=jStats();
+  const skills=new Set(); const doneItems=[];
+  ITEMS.forEach(i=>{ if(state.checks[i.id]){ doneItems.push(i); (i.sk||[]).forEach(k=>skills.add(k)); }});
+  const catItems=c=>doneItems.filter(i=>i.cat===c);
+  const item=(i)=>'<div class="ritem"><div class="rdot"></div><div><b>'+i.label+'</b></div></div>';
+
+  let html='<div class="resume">'+
+    '<div class="rname">Xander <em>Sanders</em></div>'+
+    '<div class="rtitle">Aspiring Quantitative Trader · Liberty, Missouri</div>'+
+    '<div class="rmeta"><span class="chip">Liberty North High School</span><span class="chip">Class of 2029</span><span class="chip">stratmint.app — founder</span></div>';
+
+  html+='<div class="rsec"><h4>Skills</h4><div class="rskills">';
+  if(skills.size){ [...skills].forEach(k=>html+='<span class="sk">'+k+'</span>'); }
+  else html+='<span class="rempty">Skills appear here as you complete checklist items…</span>';
+  html+='</div></div>';
+
+  html+='<div class="rsec"><h4>Trading Track Record — Live</h4>';
+  if(s.n){
+    html+='<div class="ritem"><div class="rdot"></div><div><b>'+s.n+' documented trades · '+money(s.net)+' net P&L</b>'+
+      '<span>Win rate '+Math.round(s.wr*100)+'% · Expectancy '+money(s.exp)+'/trade · Every trade logged with written thesis and post-trade lesson</span></div></div>';
+  } else html+='<span class="rempty">Track record builds automatically from the trading journal…</span>';
+  html+='</div>';
+
+  const secs=[['Projects & Ventures',catItems('proj')],['Competitions & Awards',catItems('math').concat(catItems('app').filter(i=>i.xp==='COMP'))],['Finance & Markets',catItems('trade')],['Education & Milestones',catItems('app').filter(i=>i.xp!=='COMP')]];
+  secs.forEach(sec=>{
+    html+='<div class="rsec"><h4>'+sec[0]+'</h4>';
+    if(sec[1].length) sec[1].forEach(i=>html+=item(i));
+    else html+='<span class="rempty">Growing as milestones are completed…</span>';
+    html+='</div>';
+  });
+
+  html+='<div class="rgrow"><span class="dot"></span> LIVE DOCUMENT — THIS RESUME REBUILDS ITSELF AS ACHIEVEMENTS ARE CHECKED OFF</div></div>';
+  return html;
+}
+function renderResume(){
+  document.getElementById('resumeMount').innerHTML=resumeHTML();
+  document.getElementById('pubResumeMount').innerHTML=resumeHTML();
+}
+
+/* ================= DASHBOARD ================= */
+function renderDash(){
+  const s=jStats();
+  const done=ITEMS.filter(i=>state.checks[i.id]).length;
+  document.getElementById('dashStats').innerHTML=
+    statCard(Math.round(done/ITEMS.length*100)+'%','pos','CHECKLIST','of the full path complete')+
+    statCard(s.n,'neu','TRADES LOGGED','in the journal')+
+    statCard('$'+Math.abs(s.net).toFixed(2),s.net>=0?'pos':'neg','NET P&L','all documented trades')+
+    statCard(s.n?money(s.exp):'—',s.exp>=0?'pos':'neg','EXPECTANCY','per trade');
+  let prog='';
+  CATS.forEach(cat=>{
+    const items=ITEMS.filter(i=>i.cat===cat.id);
+    const d=items.filter(i=>state.checks[i.id]).length;
+    const pct=Math.round(d/items.length*100);
+    prog+='<div class="progwrap"><div class="progrow"><span>'+cat.name.toUpperCase()+'</span><span>'+d+' / '+items.length+'</span></div><div class="progtrack"><div class="progfill" style="width:'+pct+'%"></div></div></div>';
+  });
+  document.getElementById('dashProg').innerHTML=prog;
+  const next=ITEMS.filter(i=>!state.checks[i.id]).slice(0,4);
+  document.getElementById('dashNext').innerHTML=next.map(i=>
+    '<div class="card"><div style="font-family:var(--mono);font-size:10px;color:var(--amber);letter-spacing:.1em">'+i.xp+'</div><b style="font-size:14px;display:block;margin-top:6px">'+i.label+'</b></div>'
+  ).join('')||'<div class="card"><b>Checklist complete.</b> Time to build new ones.</div>';
+}
+
+/* ================= RESOURCES ================= */
+function renderResources(){
+  document.getElementById('resList').innerHTML=RESOURCES.map(r=>
+    '<div class="res"><h3><span class="tag">'+r.tag+'</span></h3><ul>'+r.items.map(it=>
+      '<li><b>'+it[0]+'</b><span class="why">'+it[1]+'</span><span class="src">'+it[2]+'</span></li>').join('')+'</ul></div>'
+  ).join('');
+}
+
+/* ================= EXPORT / IMPORT ================= */
+document.getElementById('exportBtn').addEventListener('click',()=>{
+  openModal('Export your data','Copy this JSON somewhere safe (notes app, email to yourself). Paste it back with Import to restore everything.',JSON.stringify(state,null,2),true);
+});
+document.getElementById('importBtn').addEventListener('click',()=>{
+  openModal('Import your data','Paste a previously exported JSON below, then press Restore.', '', false);
+});
+function openModal(title,body,val,readonly){
+  const old=document.querySelector('.modal'); if(old)old.remove();
+  const m=document.createElement('div'); m.className='modal';
+  m.innerHTML='<div class="modal-card"><h3>'+title+'</h3><p>'+body+'</p><textarea '+(readonly?'readonly':'')+' id="mTa">'+esc(val)+'</textarea><div class="modal-actions"><button class="mbtn" id="mClose">Close</button>'+(readonly?'':'<button class="mbtn primary" id="mSave">Restore</button>')+'</div></div>';
+  document.body.appendChild(m);
+  m.querySelector('#mClose').addEventListener('click',()=>m.remove());
+  m.addEventListener('click',e=>{if(e.target===m)m.remove();});
+  if(!readonly) m.querySelector('#mSave').addEventListener('click',()=>{
+    try{
+      const d=JSON.parse(m.querySelector('#mTa').value);
+      if(!d.checks||!Array.isArray(d.trades))throw 0;
+      state=d; ITEMS.forEach(i=>{if(!(i.id in state.checks))state.checks[i.id]=false;});
+      m.remove(); renderAll(); toast('Data restored');
+    }catch(e){toast('Invalid JSON — could not restore');}
+  });
+}
+
+/* ================= BOOT ================= */
+function renderAll(){ renderChecklist(); renderJournal(); renderResume(); renderDash(); }
+renderResources();
+renderAll();          /* resume is live on the public page from the first paint */
+showPublic();         /* public view is the default for every visitor */
+</script>
+</body>
+</html>
